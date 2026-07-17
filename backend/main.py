@@ -3,6 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.api.v1 import auth, documents, knowledge, search, export
+from app.dedup.bootstrap import bootstrap_dedup_models
+
+bootstrap_dedup_models()
 
 app = FastAPI(
     title=settings.app_name,
