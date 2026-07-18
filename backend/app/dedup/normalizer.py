@@ -43,11 +43,15 @@ def _get_stopwords() -> set[str]:
 
 
 def strip_accents(text: str) -> str:
+    if not text:
+        return ""
     normalized = unicodedata.normalize("NFKD", text)
     return "".join(c for c in normalized if not unicodedata.combining(c))
 
 
 def normalize_text(text: str) -> str:
+    if not text:
+        return ""
     text = unicodedata.normalize("NFKC", text)
     text = text.lower()
     text = re.sub(r"[^\w\s]", " ", text, flags=re.UNICODE)
@@ -76,6 +80,8 @@ def remove_stopwords(tokens: Iterable[str]) -> list[str]:
 
 
 def token_set(text: str) -> set[str]:
+    if not text:
+        return set()
     cleaned = normalize_text(text)
     cleaned = strip_accents(cleaned)
     tokens = cleaned.split()
@@ -85,9 +91,13 @@ def token_set(text: str) -> set[str]:
 
 
 def canonical_form(text: str) -> str:
+    if not text:
+        return ""
     tokens = token_set(text)
     return " ".join(sorted(tokens))
 
 
 def full_normalize(text: str) -> str:
+    """Full normalization: lowercase, accents removed, punctuation stripped,
+    lemmatized, stopwords removed, tokens sorted. Equivalent to canonical_form."""
     return canonical_form(text)
