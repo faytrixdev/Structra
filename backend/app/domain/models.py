@@ -47,6 +47,7 @@ class Document(Base):
     file_path = Column(String(512), nullable=False)
     file_size = Column(BigInteger)
     page_count = Column(Integer)
+    content_hash = Column(String(64), nullable=True, index=True)
     status = Column(SAEnum(DocumentStatus), nullable=False, default=DocumentStatus.UPLOADED)
     extra_data = Column("metadata", JSON, default=dict)
     error_message = Column(Text)

@@ -1,4 +1,6 @@
+import hashlib
 import uuid
+import os
 from datetime import datetime, timezone
 from typing import Optional
 from fastapi import UploadFile
@@ -8,19 +10,29 @@ from app.config import settings
 from app.domain.models import Document, AuditLog
 from app.domain.types import DocumentStatus
 
+UPLOAD_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "uploads")
 
-async def upload_document(db: Session, organization_id: str, user_id: str, file: UploadFile) -> Document:
+
+async def upload_document(db: Session, organization_id: str, user_id: str, file: UploadFile, content: bytes) -> Document:
     if file.content_type not in settings.allowed_file_types:
         raise ValueError(f"File type {file.content_type} not supported")
-    content = await file.read()
     file_size = len(content)
     if file_size > settings.max_file_size_mb * 1024 * 1024:
         raise ValueError(f"File exceeds {settings.max_file_size_mb}MB limit")
-    file_path = f"{organization_id}/{uuid.uuid4()}-{file.filename}"
+
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    file_id = str(uuid.uuid4())
+    file_path = os.path.join(UPLOAD_DIR, f"{file_id}-{file.filename}")
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    content_hash = hashlib.sha256(content).hexdigest()
+
     doc = Document(
         organization_id=organization_id, title=file.filename or "untitled",
         file_type=file.content_type or "application/octet-stream",
-        file_path=file_path, file_size=file_size, status=DocumentStatus.UPLOADED,
+        file_path=file_path, file_size=file_size, content_hash=content_hash,
+        status=DocumentStatus.UPLOADED,
     )
     db.add(doc)
     db.flush()

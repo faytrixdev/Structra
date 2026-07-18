@@ -1,6 +1,12 @@
+import json
+import time
 from typing import Optional
 import httpx
 from app.config import settings
+
+
+class NIMClientError(Exception):
+    pass
 
 
 class NIMClient:
@@ -22,6 +28,29 @@ class NIMClient:
             response = await client.post(self.base_url, headers=headers, json=payload)
             response.raise_for_status()
             return response.json()["choices"][0]["message"]["content"]
+
+    async def chat_completion_json(self, system_prompt: str, user_prompt: str, **kwargs) -> dict:
+        content = await self.chat_completion(system_prompt, user_prompt, **kwargs)
+        parsed = self._parse_json_object(content)
+        if isinstance(parsed, dict):
+            return parsed
+        return {}
+
+    @staticmethod
+    def _parse_json_object(content: str):
+        text = content.strip()
+        try:
+            return json.loads(text)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        import re
+        fence_match = re.search(r"```(?:json)?\s*(\{.*?\}|\[.*?\])\s*```", text, flags=re.DOTALL)
+        if fence_match:
+            try:
+                return json.loads(fence_match.group(1))
+            except json.JSONDecodeError:
+                pass
+        return text
 
 
 nim_client = NIMClient()

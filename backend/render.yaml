@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: structra-backend
+    runtime: python
+    region: frankfurt
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: documents
+      - key: QDRANT_URL
+        sync: false
+      - key: QDRANT_API_KEY
+        sync: false
+      - key: NVIDIA_API_KEY
+        sync: false
+      - key: NVIDIA_MODEL
+        value: meta/llama-3.1-70b-instruct
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: PIPELINE_MODE
+        value: high_accuracy
+      - key: PIPELINE_MAX_CONCURRENCY
+        value: "2"
+      - key: PIPELINE_REQUEST_PACING_MS
+        value: "1500"
+      - key: PIPELINE_COMBINED_DEFAULT
+        value: "true"
+      - key: MAX_FILE_SIZE_MB
+        value: "50"
