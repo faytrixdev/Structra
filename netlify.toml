@@ -1,9 +1,7 @@
 [build]
   base = "frontend"
-  publish = "out"
   command = "pnpm install && pnpm build"
+  publish = ".next"
 
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
