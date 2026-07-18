@@ -1,5 +1,5 @@
 from uuid import UUID
-from passlib.context import CryptContext
+import bcrypt
 from jose import jwt
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
@@ -8,15 +8,13 @@ from app.config import settings
 from app.domain.models import User, Organization, OrganizationMember
 from app.domain.types import MemberRole
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password[:72].encode(), bcrypt.gensalt()).decode()
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return pwd_context.verify(plain, hashed)
+    return bcrypt.checkpw(plain[:72].encode(), hashed.encode())
 
 
 def create_token(user_id: UUID, organization_id: UUID) -> str:

@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Structra", description: "AI Knowledg
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} bg-zinc-950 text-zinc-100 min-h-screen`}>
+      <body className={`${inter.className} min-h-screen`}>
         <Providers>{children}</Providers>
       </body>
     </html>

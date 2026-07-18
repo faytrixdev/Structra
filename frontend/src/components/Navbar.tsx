@@ -9,14 +9,37 @@ export function Navbar() {
   const handleLogout = () => { api.clearToken(); router.push("/login"); };
 
   return (
-    <nav className="border-b border-zinc-800 bg-zinc-950 px-6 py-3 flex items-center justify-between">
-      <div className="flex items-center gap-6">
-        <Link href="/dashboard" className="text-xl font-bold text-white">Structra</Link>
-        <Link href="/documents" className="text-sm text-zinc-400 hover:text-white transition-colors">Documents</Link>
-        <Link href="/knowledge" className="text-sm text-zinc-400 hover:text-white transition-colors">Knowledge</Link>
-        <Link href="/search" className="text-sm text-zinc-400 hover:text-white transition-colors">Search</Link>
+    <nav className="sticky top-0 z-50 glass border-b border-zinc-200/60">
+      <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-8">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+              <span className="text-white font-bold text-sm">S</span>
+            </div>
+            <span className="text-lg font-bold text-gradient">Structra</span>
+          </Link>
+          <div className="hidden md:flex items-center gap-1">
+            <NavLink href="/dashboard">Dashboard</NavLink>
+            <NavLink href="/documents">Documents</NavLink>
+            <NavLink href="/knowledge">Knowledge</NavLink>
+            <NavLink href="/search">Search</NavLink>
+          </div>
+        </div>
+        <Button variant="ghost" onClick={handleLogout} className="text-zinc-600 hover:text-zinc-900">
+          Logout
+        </Button>
       </div>
-      <Button variant="ghost" onClick={handleLogout} className="text-zinc-400 hover:text-white">Logout</Button>
     </nav>
+  );
+}
+
+function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="px-3 py-1.5 text-sm font-medium text-zinc-600 rounded-md hover:text-zinc-900 hover:bg-zinc-100/80 transition-colors"
+    >
+      {children}
+    </Link>
   );
 }
