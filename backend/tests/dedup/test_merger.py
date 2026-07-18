@@ -24,6 +24,13 @@ class TestTypeConflict:
         assert TYPE_PRIORITY[KnowledgeType.POLICY] > TYPE_PRIORITY[KnowledgeType.DEFINITION]
         assert TYPE_PRIORITY[KnowledgeType.CONSTRAINT] > TYPE_PRIORITY[KnowledgeType.EVENT]
 
+    def test_string_types_resolved_by_priority(self):
+        assert resolve_type_conflict("Concept", "Procedure") == "Procedure"
+        assert resolve_type_conflict("Definition", "Policy") == "Policy"
+
+    def test_string_type_lower_priority_loses_regardless_of_order(self):
+        assert resolve_type_conflict("Procedure", "Concept") == "Procedure"
+
 
 class TestMergeEntities:
     def test_union_of_different_entities(self):

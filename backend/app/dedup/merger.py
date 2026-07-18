@@ -25,9 +25,22 @@ TYPE_PRIORITY: dict[KnowledgeType, int] = {
 }
 
 
-def resolve_type_conflict(type_a: KnowledgeType, type_b: KnowledgeType) -> KnowledgeType:
-    priority_a = TYPE_PRIORITY.get(type_a, 0)
-    priority_b = TYPE_PRIORITY.get(type_b, 0)
+def _coerce_type(value: Any) -> KnowledgeType | None:
+    if isinstance(value, KnowledgeType):
+        return value
+    if isinstance(value, str):
+        try:
+            return KnowledgeType(value)
+        except ValueError:
+            return None
+    return None
+
+
+def resolve_type_conflict(type_a: Any, type_b: Any) -> Any:
+    enum_a = _coerce_type(type_a)
+    enum_b = _coerce_type(type_b)
+    priority_a = TYPE_PRIORITY.get(enum_a, 0) if enum_a is not None else 0
+    priority_b = TYPE_PRIORITY.get(enum_b, 0) if enum_b is not None else 0
     if priority_a >= priority_b:
         return type_a
     return type_b
