@@ -68,10 +68,40 @@ def lemmatize_token(token: str) -> str:
     return token
 
 
+def lemmatize_tokens(tokens: list[str]) -> list[str]:
+    """Batch-lemmatize a list of pre-split tokens in a single spaCy pass.
+
+    Preserves per-token semantics: tokens of length <= 2 are returned as-is
+    (matching lemmatize_token), all others take their spaCy lemma.
+    """
+    if not tokens:
+        return []
+    result: list[str] = []
+    to_lemmatize: list[tuple[int, str]] = []
+    for i, tok in enumerate(tokens):
+        if len(tok) <= 2:
+            result.append(tok)
+        else:
+            result.append(tok)
+            to_lemmatize.append((i, tok))
+    if not to_lemmatize:
+        return result
+    nlp = _get_nlp()
+    joined = " ".join(tok for _, tok in to_lemmatize)
+    doc = nlp(joined)
+    lemmas = [t.lemma_ for t in doc]
+    if len(lemmas) == len(to_lemmatize):
+        for (idx, _), lemma in zip(to_lemmatize, lemmas):
+            result[idx] = lemma
+    else:
+        for idx, tok in to_lemmatize:
+            result[idx] = lemmatize_token(tok)
+    return result
+
+
 def lemmatize_text(text: str) -> str:
     tokens = text.split()
-    lemmatized = [lemmatize_token(t) for t in tokens]
-    return " ".join(lemmatized)
+    return " ".join(lemmatize_tokens(tokens))
 
 
 def remove_stopwords(tokens: Iterable[str]) -> list[str]:
@@ -85,7 +115,7 @@ def token_set(text: str) -> set[str]:
     cleaned = normalize_text(text)
     cleaned = strip_accents(cleaned)
     tokens = cleaned.split()
-    lemmatized = [lemmatize_token(t) for t in tokens]
+    lemmatized = lemmatize_tokens(tokens)
     filtered = remove_stopwords(lemmatized)
     return set(filtered)
 
