@@ -94,13 +94,14 @@ def validate_knowledge_obj(ko: dict[str, Any]) -> dict[str, Any]:
 async def extract_ideas_batch(
     document_id: str,
     segments: list[str],
-    max_concurrency: int = 8,
+    max_concurrency: int = 2,
 ) -> list[dict[str, Any]]:
     """Extract ideas from multiple segments in parallel.
 
     Each segment is an independent LLM call; we run up to max_concurrency
-    concurrently via a semaphore. Default lowered (was 12) to stay under the
-    NIM 429 rate-limit when batching many segments simultaneously.
+    concurrently via a semaphore. The NIM client also enforces a global
+    minimum-interval rate limiter so even with high concurrency we don't
+    burst past the NIM free-tier 429 threshold.
     """
     sem = asyncio.Semaphore(max_concurrency)
     all_ideas: list[dict[str, Any]] = []
@@ -131,7 +132,7 @@ async def extract_ideas_batch(
 
 async def classify_and_extract_entities_batch(
     ideas: list[dict[str, Any]],
-    max_concurrency: int = 6,
+    max_concurrency: int = 2,
     classify_concurrency: int | None = None,
     entity_concurrency: int | None = None,
     combined: bool | None = None,
@@ -142,8 +143,9 @@ async def classify_and_extract_entities_batch(
     id, type, title, statement, original_text, confidence, entities, conditions.
 
     `classify_concurrency` and `entity_concurrency` independently throttle
-    each call type. Default when omitted: `classify=4`, `entity=8`. This
-    avoids hitting the NIM 429 rate limit when many ideas fan out in parallel.
+    each call type. Default when omitted: `classify=2`, `entity=2`. The
+    NIM client rate-limiter additionally paces every request globally so
+    bursts cannot trigger 429s.
 
     When `combined=True`, both tasks run in a SINGLE LLM call per idea
     (using SYSTEM_CLASSIFY_AND_EXTRACT). This halves the total request count
@@ -205,9 +207,9 @@ async def classify_and_extract_entities_batch(
 
     # ── Legacy two-call path (used when combined=False is explicitly set) ──
     if classify_concurrency is None:
-        classify_concurrency = getattr(settings, "pipeline_classify_concurrency", 4)
+        classify_concurrency = getattr(settings, "pipeline_classify_concurrency", 2)
     if entity_concurrency is None:
-        entity_concurrency = getattr(settings, "pipeline_entity_concurrency", max_concurrency * 2)
+        entity_concurrency = getattr(settings, "pipeline_entity_concurrency", max_concurrency)
     classify_sem = asyncio.Semaphore(classify_concurrency)
     entity_sem = asyncio.Semaphore(entity_concurrency)
 

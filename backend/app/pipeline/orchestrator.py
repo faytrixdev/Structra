@@ -361,10 +361,6 @@ async def run_pipeline(
         except Exception:
             db.rollback()
         db.close()
-        # Close the shared NIM client to avoid leaking httpx connections
-        # across many sequential pipeline runs.
-        try:
-            from app.provider.nim_client import nim_client
-            await nim_client.aclose()
-        except Exception:
-            pass
+        # NOTE: do NOT close the shared NIM client here — it is a long-lived
+        # singleton with a connection pool. The rate limiter state must persist
+        # across pipeline runs. The client closes on interpreter shutdown.
