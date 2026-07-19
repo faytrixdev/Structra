@@ -274,29 +274,47 @@ async def classify_and_extract_entities_batch(
 async def extract_relations_batch(
     knowledge_objects: list[dict[str, Any]],
     max_concurrency: int = 1,
+    chunk_size: int = 20,
 ) -> list[dict[str, Any]]:
-    """Extract relations between knowledge objects in a single LLM call.
+    """Extract relations between knowledge objects via the LLM.
 
-    Returns a list of relation dicts with keys:
+    Large knowledge sets are split into chunks of `chunk_size` objects to
+    keep each LLM prompt within NIM's context window. Each chunk is a
+    separate LLM call; results are merged and re-indexed to the original
+    list. Returns a list of relation dicts with keys:
     source_index, target_index, type, confidence.
     """
     if len(knowledge_objects) < 2:
         return []
 
-    statements_block = "\n".join(
-        f"[{i}] {ko.get('statement', '')}" for i, ko in enumerate(knowledge_objects)
-    )
-    user_prompt = (
-        f"Knowledge objects:\n{statements_block}\n\n"
-        "Identify relationships between the listed knowledge objects."
-    )
+    chunks = [
+        knowledge_objects[i : i + chunk_size]
+        for i in range(0, len(knowledge_objects), chunk_size)
+    ]
 
-    try:
-        result = await nim_client.chat_completion_json(
-            SYSTEM_BUILD_RELATIONS,
-            user_prompt,
+    async def _process_chunk(chunk_idx: int, chunk: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        offset = chunk_idx * chunk_size
+        statements_block = "\n".join(
+            f"[{i}] {ko.get('statement', '')}" for i, ko in enumerate(chunk)
         )
-        relations = result.get("relations", [])
+        user_prompt = (
+            f"Knowledge objects:\n{statements_block}\n\n"
+            "Identify relationships between the listed knowledge objects."
+        )
+
+        try:
+            result = await nim_client.chat_completion_json(
+                SYSTEM_BUILD_RELATIONS,
+                user_prompt,
+            )
+        except Exception as e:
+            logger.warning(
+                "relation extraction failed for chunk %d (size=%d): %s",
+                chunk_idx, len(chunk), e,
+            )
+            return []
+
+        relations = result.get("relations", []) or []
         validated: list[dict[str, Any]] = []
         for rel in relations:
             src = rel.get("source_index", -1)
@@ -305,22 +323,24 @@ async def extract_relations_batch(
             conf = rel.get("confidence", 0.5)
             if (
                 isinstance(src, int) and isinstance(tgt, int)
-                and 0 <= src < len(knowledge_objects)
-                and 0 <= tgt < len(knowledge_objects)
+                and 0 <= src < len(chunk)
+                and 0 <= tgt < len(chunk)
                 and src != tgt
                 and rtype in _ALL_RELATION_TYPES
                 and 0 <= conf <= 1
             ):
                 validated.append({
-                    "source_index": src,
-                    "target_index": tgt,
+                    "source_index": src + offset,
+                    "target_index": tgt + offset,
                     "type": rtype,
                     "confidence": conf,
                 })
         return validated
-    except Exception as e:
-        logger.warning("relation extraction failed: %s", e)
-        return []
+
+    chunk_results = await asyncio.gather(
+        *[_process_chunk(i, chunk) for i, chunk in enumerate(chunks)]
+    )
+    return [rel for sub in chunk_results for rel in sub]
 
 
 def build_relations_heuristic(
